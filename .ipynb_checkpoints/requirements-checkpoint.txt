@@ -1,0 +1,14 @@
+torch==2.5.0
+sympy==1.13.1
+tensorflow
+gensim==2.3
+scikit-learn[alldeps]
+nltk
+spacy
+transformers==4.45.2
+numpy
+pandas
+scikit-learn
+torchvision
+torchaudio
+pytorch-cuda==12.1
