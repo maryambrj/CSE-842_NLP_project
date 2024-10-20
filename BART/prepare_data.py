@@ -117,7 +117,7 @@ def tokenize_and_save(data_pairs, tokenizer, filename):
         # Tokenize input
         inputs = tokenizer(
             pair['input'],
-            max_length=1024,
+            max_length=9000,
             truncation=True,
             padding='max_length',
             return_tensors='pt'
@@ -125,7 +125,7 @@ def tokenize_and_save(data_pairs, tokenizer, filename):
         # Tokenize output
         outputs = tokenizer(
             pair['output'],
-            max_length=512,
+            max_length=1024,
             truncation=True,
             padding='max_length',
             return_tensors='pt'
@@ -145,7 +145,12 @@ def save_data_pairs(data_pairs, filename):
 
 if __name__ == '__main__':
     # Define Datasets
-    datasets = ['iclr_2017', 'conll_2016', 'arxiv.cs.lg_2007-2017', 'arxiv.cs.cl_2007-2017', 'arxiv.cs.ai_2007-2017', 'acl_2017']
+    datasets = ['iclr_2017', 
+                'conll_2016', 
+                # 'arxiv.cs.lg_2007-2017', 
+                # 'arxiv.cs.cl_2007-2017', 
+                # 'arxiv.cs.ai_2007-2017', 
+                'acl_2017']
 
     # Initialize empty lists to collect data pairs from all datasets
     train_data_pairs = []
