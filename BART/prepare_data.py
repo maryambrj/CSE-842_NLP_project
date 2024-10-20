@@ -117,7 +117,7 @@ def tokenize_and_save(data_pairs, tokenizer, filename):
         # Tokenize input
         inputs = tokenizer(
             pair['input'],
-            max_length=9000,
+            max_length=1024,  #it is 1024 for BART
             truncation=True,
             padding='max_length',
             return_tensors='pt'
