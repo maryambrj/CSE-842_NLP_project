@@ -133,10 +133,16 @@ if __name__ == '__main__':
     print(f"Total validation pairs: {len(dev_data_pairs)}")
     print(f"Total test pairs: {len(test_data_pairs)}")
 
+    # Create data directory if it doesn't exist
+    preprocessed_data_dir = './processed_data'
+    if not os.path.exists(preprocessed_data_dir):
+        os.makedirs(preprocessed_data_dir)
 
-    save_data_pairs(train_data_pairs, './processed_data/train_data.jsonl')
-    save_data_pairs(dev_data_pairs, './processed_data/dev_data.jsonl')
-    save_data_pairs(test_data_pairs, './processed_data/test_data.jsonl')
+
+    save_data_pairs(train_data_pairs, os.path.join(preprocessed_data_dir, 'train_data.jsonl'))
+    save_data_pairs(dev_data_pairs, os.path.join(preprocessed_data_dir, 'dev_data.jsonl'))
+    save_data_pairs(test_data_pairs, os.path.join(preprocessed_data_dir, 'test_data.jsonl'))
+
 
     print("Preprocessing data...")
     for data_pairs in [train_data_pairs, dev_data_pairs, test_data_pairs]:
@@ -147,8 +153,8 @@ if __name__ == '__main__':
     tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
 
     print("Tokenizing and saving data...")
-    tokenize_and_save(train_data_pairs, tokenizer, './processed_data/train_tokenized.pt')
-    tokenize_and_save(dev_data_pairs, tokenizer, './processed_data/dev_tokenized.pt')
-    tokenize_and_save(test_data_pairs, tokenizer, './processed_data/test_tokenized.pt')
+    tokenize_and_save(train_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'train_tokenized.pt'))
+    tokenize_and_save(dev_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'dev_tokenized.pt'))
+    tokenize_and_save(test_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'test_tokenized.pt'))
 
     print("Data preparation complete.")
