@@ -2,3 +2,4 @@ PeerRead/
 processed_data/
 start.txt
 wandb/
+best_model/

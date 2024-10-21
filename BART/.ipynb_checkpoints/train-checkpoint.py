@@ -3,36 +3,41 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import BartForConditionalGeneration, BartTokenizer, get_linear_schedule_with_warmup
 import torch.nn.functional as F
 import wandb
+import pickle
+
 
 class ReviewDataset(Dataset):
-    def __init__(self, inputs, outputs):
-        self.inputs = inputs
-        self.outputs = outputs
+    def __init__(self, data):
+        self.data = data
 
     def __len__(self):
-        return len(self.inputs)
+        return len(self.data)
 
     def __getitem__(self, idx):
         return {
-            'input_ids': self.inputs[idx]['input_ids'].squeeze(),
-            'attention_mask': self.inputs[idx]['attention_mask'].squeeze(),
-            'labels': self.outputs[idx]['input_ids'].squeeze(),
+            'input_ids': torch.tensor(self.data[idx]['input_ids'], dtype=torch.long),
+            'attention_mask': torch.tensor(self.data[idx]['attention_mask'], dtype=torch.long),
+            'labels': torch.tensor(self.data[idx]['labels'], dtype=torch.long),
         }
 
-def collate_fn(batch):
-    input_ids = [item['input_ids'] for item in batch]
-    attention_mask = [item['attention_mask'] for item in batch]
-    labels = [item['labels'] for item in batch]
 
-    input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
-    attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
-    labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=-100)
+def collate_fn(batch):
+    input_ids = torch.stack([item['input_ids'] for item in batch])
+    attention_mask = torch.stack([item['attention_mask'] for item in batch])
+    labels = torch.stack([item['labels'] for item in batch])
+
+        # # use dynamic padding instead of fixed max_length
+    # input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
+    # attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
+    # labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=-100)
 
     return {
         'input_ids': input_ids,
         'attention_mask': attention_mask,
         'labels': labels,
     }
+
+
 
 if __name__ == '__main__':
 
@@ -44,14 +49,16 @@ if __name__ == '__main__':
     wandb.init(project='CSE-842_NLP_project', entity='maryam-brj')
 
     print("Loading tokenized data...")
-    train_inputs, train_outputs = torch.load('./processed_data/train_tokenized.pt')
-    dev_inputs, dev_outputs = torch.load('./processed_data/dev_tokenized.pt')
+    with open('./processed_data/train_tokenized.pkl', 'rb') as f:
+        train_data = pickle.load(f)
+    with open('./processed_data/dev_tokenized.pkl', 'rb') as f:
+        dev_data = pickle.load(f)
 
     print("Creating datasets and data loaders...")
     tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
-
-    train_dataset = ReviewDataset(train_inputs, train_outputs)
-    dev_dataset = ReviewDataset(dev_inputs, dev_outputs)
+    
+    train_dataset = ReviewDataset(train_data)
+    dev_dataset = ReviewDataset(dev_data)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     dev_loader = DataLoader(dev_dataset, batch_size=batch_size, collate_fn=collate_fn)

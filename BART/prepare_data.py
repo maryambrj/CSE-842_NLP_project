@@ -3,6 +3,7 @@ import json
 import re
 import torch
 from transformers import BartTokenizer
+import pickle
 
 # Define helper functions
 def extract_input_output_pairs(data_split_path):
@@ -109,18 +110,16 @@ def preprocess_text(text):
     text = text.strip()
     return text
 
-
 def tokenize_and_save(data_pairs, tokenizer, filename):
-    tokenized_inputs = []
-    tokenized_outputs = []
+    tokenized_data = []
     for pair in data_pairs:
         # Tokenize input
         inputs = tokenizer(
             pair['input'],
-            max_length=1024,  #it is 1024 for BART
+            max_length=1024,  # it is 1024 for BART
             truncation=True,
             padding='max_length',
-            return_tensors='pt'
+            # return_tensors='pt'
         )
         # Tokenize output
         outputs = tokenizer(
@@ -128,12 +127,17 @@ def tokenize_and_save(data_pairs, tokenizer, filename):
             max_length=1024,
             truncation=True,
             padding='max_length',
-            return_tensors='pt'
+            # return_tensors='pt'
         )
-        tokenized_inputs.append(inputs)
-        tokenized_outputs.append(outputs)
-    # Save tokenized data
-    torch.save((tokenized_inputs, tokenized_outputs), filename)
+        tokenized_data.append({
+            'input_ids': inputs['input_ids'],
+            'attention_mask': inputs['attention_mask'],
+            'labels': outputs['input_ids']
+        })
+
+    # Save tokenized data using pickle
+    with open(filename, 'wb') as f:
+        pickle.dump(tokenized_data, f)
 
 
 def save_data_pairs(data_pairs, filename):
@@ -200,8 +204,8 @@ if __name__ == '__main__':
     tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
 
     print("Tokenizing and saving data...")
-    tokenize_and_save(train_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'train_tokenized.pt'))
-    tokenize_and_save(dev_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'dev_tokenized.pt'))
-    tokenize_and_save(test_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'test_tokenized.pt'))
+    tokenize_and_save(train_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'train_tokenized.pkl'))
+    tokenize_and_save(dev_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'dev_tokenized.pkl'))
+    tokenize_and_save(test_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'test_tokenized.pkl'))
 
     print("Data preparation complete.")
