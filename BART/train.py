@@ -1,9 +1,14 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import BartForConditionalGeneration, BartTokenizer, get_linear_schedule_with_warmup
+from transformers import 
+{BartForConditionalGeneration, 
+BartTokenizer, 
+get_linear_schedule_with_warmup,
+GenerationConfig}
 import torch.nn.functional as F
 import wandb
 import pickle
+
 
 
 class ReviewDataset(Dataset):
