@@ -2,4 +2,5 @@ PeerRead/
 processed_data/
 start.txt
 wandb/
-best_model/
+BART/best_model
+BART/fine_tuned_model

@@ -28,7 +28,7 @@ def collate_fn(batch):
 
 if __name__ == '__main__':
     
-    model_dir = './best_model'
+    model_dir = './BART/best_model'
     tokenizer = BartTokenizer.from_pretrained(model_dir)
     model = BartForConditionalGeneration.from_pretrained(model_dir)
 
@@ -40,9 +40,14 @@ if __name__ == '__main__':
         early_stopping=True,
         num_beams=4,
         no_repeat_ngram_size=3,
-        forced_bos_token_id=tokenizer.bos_token_id,
+        # forced_bos_token_id=tokenizer.bos_token_id,
+        forced_bos_token_id=0,
+        forced_eos_token_id=2,
         max_length=1024,
     )
+
+    model.generation_config = generation_config
+
 
     print("Loading tokenized data...")
     with open('./processed_data/dev_tokenized.pkl', 'rb') as f:
@@ -90,9 +95,9 @@ if __name__ == '__main__':
                     f.write(ref.strip() + '\n')
 
     print("Generating outputs for the dev set...")
-    generate_outputs(dev_loader, 'dev_outputs.txt')
+    generate_outputs(dev_loader, './BART/dev_outputs.txt')
 
     print("Generating outputs for the test set...")
-    generate_outputs(test_loader, 'test_outputs.txt')
+    generate_outputs(test_loader, './BART/test_outputs.txt')
 
     print("Generation complete.")

@@ -1,13 +1,11 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import 
-{BartForConditionalGeneration, 
-BartTokenizer, 
-get_linear_schedule_with_warmup,
-GenerationConfig}
+from transformers import BartForConditionalGeneration, BartTokenizer, get_linear_schedule_with_warmup, GenerationConfig
 import torch.nn.functional as F
 import wandb
 import pickle
+from datetime import datetime
+from torch.nn.utils.rnn import pad_sequence
 
 
 
@@ -25,16 +23,29 @@ class ReviewDataset(Dataset):
             'labels': torch.tensor(self.data[idx]['labels'], dtype=torch.long),
         }
 
+# def collate_fn(batch):
+#     input_ids = torch.stack([item['input_ids'] for item in batch])
+#     attention_mask = torch.stack([item['attention_mask'] for item in batch])
+#     labels = torch.stack([item['labels'] for item in batch])
+
+    # return {
+    #     'input_ids': input_ids,
+    #     'attention_mask': attention_mask,
+    #     'labels': labels,
+    # }
+
 
 def collate_fn(batch):
-    input_ids = torch.stack([item['input_ids'] for item in batch])
-    attention_mask = torch.stack([item['attention_mask'] for item in batch])
-    labels = torch.stack([item['labels'] for item in batch])
-
-        # # use dynamic padding instead of fixed max_length
-    # input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
-    # attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
-    # labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=-100)
+    input_ids = [item['input_ids'] for item in batch]
+    attention_mask = [item['attention_mask'] for item in batch]
+    labels = [item['labels'] for item in batch]
+    
+    # Dynamically pad the input_ids, attention_mask, and labels to the length of the longest sequence in the batch
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
+    attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
+    
+    # For labels, we use `-100` as the padding token, which is the default in PyTorch for ignoring loss computation
+    labels = pad_sequence(labels, batch_first=True, padding_value=-100)
 
     return {
         'input_ids': input_ids,
@@ -47,11 +58,15 @@ def collate_fn(batch):
 if __name__ == '__main__':
 
     # hyperparameters
-    num_epochs = 5
-    learning_rate = 5e-5
+    num_epochs = 3
+    learning_rate = 5e-6 #1e-5
     batch_size = 2
+
+    current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_name = f"bs{batch_size}_lr{learning_rate}_{current_time}"
     
-    wandb.init(project='CSE-842_NLP_project', entity='maryam-brj')
+    wandb.init(project='CSE-842_NLP_project', entity='maryam-brj', name=run_name)
+
 
     print("Loading tokenized data...")
     with open('./processed_data/train_tokenized.pkl', 'rb') as f:
@@ -71,6 +86,12 @@ if __name__ == '__main__':
     print("Initializing the model...")
     model = BartForConditionalGeneration.from_pretrained('facebook/bart-base')
 
+    # Reset generation config to default to avoid warnings
+    # model.generation_config = GenerationConfig.from_pretrained('facebook/bart-base')
+    model.generation_config = GenerationConfig()
+
+    print(model.config)
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
 
@@ -78,6 +99,7 @@ if __name__ == '__main__':
 
     # learning rate scheduler
     total_steps = len(train_loader) * num_epochs
+    
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
         num_warmup_steps=int(0.1 * total_steps),
@@ -164,8 +186,8 @@ if __name__ == '__main__':
         if avg_dev_loss < best_dev_loss:
             best_dev_loss = avg_dev_loss
             epochs_no_improve = 0
-            model.save_pretrained('best_model')
-            tokenizer.save_pretrained('best_model')
+            model.save_pretrained('./BART/best_model')
+            tokenizer.save_pretrained('./BART/best_model')
             print("Best model saved.")
             wandb.run.summary["best_val_loss"] = best_dev_loss
         else:
@@ -180,8 +202,9 @@ if __name__ == '__main__':
         model.train()
 
     print("Saving the final fine-tuned model...")
-    model.save_pretrained('fine_tuned_bart_model')
-    tokenizer.save_pretrained('fine_tuned_bart_model')
+    model.save_pretrained('./BART/fine_tuned_model')
+    tokenizer.save_pretrained('./BART/fine_tuned_model')
+    model.generation_config.save_pretrained('./BART/fine_tuned_model')
     print("Model training complete.")
 
     wandb.finish()
