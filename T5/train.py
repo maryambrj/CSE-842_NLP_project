@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import BartForConditionalGeneration, BartTokenizer, get_linear_schedule_with_warmup, GenerationConfig
+# from transformers import BartForConditionalGeneration, BartTokenizer, get_linear_schedule_with_warmup, GenerationConfig
+from transformers import T5ForConditionalGeneration, AutoTokenizer, get_linear_schedule_with_warmup, GenerationConfig
 import torch.nn.functional as F
 import wandb
 import pickle
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         dev_data = pickle.load(f)
 
     print("Creating datasets and data loaders...")
-    tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
+    tokenizer = AutoTokenizer.from_pretrained('t5-base')
     
     train_dataset = ReviewDataset(train_data)
     dev_dataset = ReviewDataset(dev_data)
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     dev_loader = DataLoader(dev_dataset, batch_size=batch_size, collate_fn=collate_fn)
 
     print("Initializing the model...")
-    model = BartForConditionalGeneration.from_pretrained('facebook/bart-base')
+    model = T5ForConditionalGeneration.from_pretrained('t5-base')
 
     # Reset generation config to default to avoid warnings
     # model.generation_config = GenerationConfig.from_pretrained('facebook/bart-base')
@@ -186,8 +187,8 @@ if __name__ == '__main__':
         if avg_dev_loss < best_dev_loss:
             best_dev_loss = avg_dev_loss
             epochs_no_improve = 0
-            model.save_pretrained('./BART/best_model')
-            tokenizer.save_pretrained('./BART/best_model')
+            model.save_pretrained('./T5/best_model')
+            tokenizer.save_pretrained('./T5/best_model')
             print("Best model saved.")
             wandb.run.summary["best_val_loss"] = best_dev_loss
         else:
@@ -202,9 +203,9 @@ if __name__ == '__main__':
         model.train()
 
     print("Saving the final fine-tuned model...")
-    model.save_pretrained('./BART/fine_tuned_model')
-    tokenizer.save_pretrained('./BART/fine_tuned_model')
-    model.generation_config.save_pretrained('./BART/fine_tuned_model')
+    model.save_pretrained('./T5/fine_tuned_model')
+    tokenizer.save_pretrained('./T5/fine_tuned_model')
+    model.generation_config.save_pretrained('./T5/fine_tuned_model')
     print("Model training complete.")
 
     wandb.finish()

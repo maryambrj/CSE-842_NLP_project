@@ -2,7 +2,8 @@ import os
 import json
 import re
 import torch
-from transformers import BartTokenizer
+# from transformers import BartTokenizer
+from transformer import T5ForConditionalGeneration, AutoTokenizer
 import pickle
 
 # Define helper functions
@@ -201,7 +202,8 @@ if __name__ == '__main__':
             pair['input'] = preprocess_text(pair['input'])
             pair['output'] = preprocess_text(pair['output'])
 
-    tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
+    # tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
+    tokenizer = AutoTokenizer.from_pretrained('t5-base')
 
     print("Tokenizing and saving data...")
     tokenize_and_save(train_data_pairs, tokenizer, os.path.join(preprocessed_data_dir, 'train_tokenized.pkl'))

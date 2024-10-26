@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import BartForConditionalGeneration, BartTokenizer, GenerationConfig
+# from transformers import BartForConditionalGeneration, BartTokenizer, GenerationConfig
+from transformer import T5ForConditionalGeneration, AutoTokenizer, GenerationConfig
 import pickle
 import os
 
@@ -28,9 +29,10 @@ def collate_fn(batch):
 
 if __name__ == '__main__':
     
-    model_dir = './BART/best_model'
-    tokenizer = BartTokenizer.from_pretrained(model_dir)
-    model = BartForConditionalGeneration.from_pretrained(model_dir)
+    # model_dir = './BART/best_model'
+    model_dir = './T5/best_model'
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = T5ForConditionalGeneration.from_pretrained(model_dir)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -95,9 +97,9 @@ if __name__ == '__main__':
                     f.write(ref.strip() + '\n')
 
     print("Generating outputs for the dev set...")
-    generate_outputs(dev_loader, './BART/dev_outputs.txt')
+    generate_outputs(dev_loader, './T5/dev_outputs.txt')
 
     print("Generating outputs for the test set...")
-    generate_outputs(test_loader, './BART/test_outputs.txt')
+    generate_outputs(test_loader, './T5/test_outputs.txt')
 
     print("Generation complete.")
