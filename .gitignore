@@ -4,3 +4,10 @@ start.txt
 wandb/
 BART/best_model
 BART/fine_tuned_model
+job.sh
+BART/test_outputs_references.txt
+BART/test_outputs.txt
+BART/dev_outputs_references.txt
+BART/dev_outputs.txt
+*.ipynb_checkpoints/
+*.ipynb_checkpoints/*

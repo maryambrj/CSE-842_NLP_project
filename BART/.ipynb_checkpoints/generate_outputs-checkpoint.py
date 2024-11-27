@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import BartForConditionalGeneration, BartTokenizer, GenerationConfig
 import pickle
+from torch.nn.utils.rnn import pad_sequence
 import os
 
 class ReviewDataset(Dataset):
@@ -18,16 +19,23 @@ class ReviewDataset(Dataset):
         }
 
 def collate_fn(batch):
-    input_ids = torch.stack([item['input_ids'] for item in batch])
+    input_ids = [item['input_ids'] for item in batch]
+    labels = [item['labels'] for item in batch]
+
+    # Dynamically pad the input_ids and labels
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
+    labels = pad_sequence(labels, batch_first=True, padding_value=-100)
+
+    # Create attention masks
     attention_mask = (input_ids != tokenizer.pad_token_id).long()
+
     return {
         'input_ids': input_ids,
         'attention_mask': attention_mask,
-        'labels': torch.stack([item['labels'] for item in batch]),
+        'labels': labels,
     }
 
 if __name__ == '__main__':
-    
     model_dir = './BART/best_model'
     tokenizer = BartTokenizer.from_pretrained(model_dir)
     model = BartForConditionalGeneration.from_pretrained(model_dir)
@@ -36,17 +44,14 @@ if __name__ == '__main__':
     model.to(device)
     model.eval()
 
+    # Ensure that `decoder_start_token_id` is set
     generation_config = GenerationConfig(
         early_stopping=True,
         num_beams=4,
-        no_repeat_ngram_size=3,
-        # forced_bos_token_id=tokenizer.bos_token_id,
-        forced_bos_token_id=0,
-        forced_eos_token_id=2,
-        max_length=1024,
+        no_repeat_ngram_size=5, #3,
+        max_length=512,  # Adjust max length as needed
+        decoder_start_token_id=tokenizer.bos_token_id,  # Explicitly set the decoder start token ID
     )
-
-    model.generation_config = generation_config
 
 
     print("Loading tokenized data...")
@@ -58,41 +63,54 @@ if __name__ == '__main__':
     dev_dataset = ReviewDataset(dev_data)
     test_dataset = ReviewDataset(test_data)
 
-    dev_loader = DataLoader(dev_dataset, batch_size=8, collate_fn=collate_fn)
-    test_loader = DataLoader(test_dataset, batch_size=8, collate_fn=collate_fn)
+    dev_loader = DataLoader(dev_dataset, batch_size=1, collate_fn=collate_fn, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=1, collate_fn=collate_fn, shuffle=False)
+
 
     def generate_outputs(dataloader, output_file):
-        all_outputs = []
-        all_references = []  # for if we have reference summaries
+        all_outputs = []  # Reset after each dataset
+        all_references = []  # Reset references as well
+    
         with torch.no_grad():
             for batch in dataloader:
                 input_ids = batch['input_ids'].to(device)
                 attention_mask = batch['attention_mask'].to(device)
-
+    
+                # Generate outputs
                 outputs = model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
-                    generation_config=generation_config,
+                    num_beams=generation_config.num_beams,
+                    no_repeat_ngram_size=generation_config.no_repeat_ngram_size,
+                    max_length=generation_config.max_length,
+                    early_stopping=generation_config.early_stopping,
+                    decoder_start_token_id=generation_config.decoder_start_token_id,
                 )
-
+    
+                # Decode outputs and append to the final list
                 decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
                 all_outputs.extend(decoded_outputs)
-
-                # if want to save references for evaluation
-                labels = batch['labels'].to(device)
-                decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-                all_references.extend(decoded_labels)
-
+    
+    
+                # Decode labels (optional, for evaluation)
+                if 'labels' in batch:
+                    decoded_labels = tokenizer.batch_decode(batch['labels'], skip_special_tokens=True)
+                    all_references.extend(decoded_labels)
+    
+        # Write generated outputs to file (one output per line)
         with open(output_file, 'w', encoding='utf-8') as f:
             for output in all_outputs:
                 f.write(output.strip() + '\n')
 
-        # save references for evaluation
+        # Write references to a separate file (for evaluation purposes)
         if all_references:
             ref_file = output_file.replace('.txt', '_references.txt')
             with open(ref_file, 'w', encoding='utf-8') as f:
                 for ref in all_references:
                     f.write(ref.strip() + '\n')
+
+
+
 
     print("Generating outputs for the dev set...")
     generate_outputs(dev_loader, './BART/dev_outputs.txt')
