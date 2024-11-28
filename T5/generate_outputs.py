@@ -5,6 +5,7 @@ from transformers import T5ForConditionalGeneration, AutoTokenizer, GenerationCo
 import pickle
 import os
 from tqdm import tqdm
+from torch.nn.utils.rnn import pad_sequence
 
 class ReviewDataset(Dataset):
     def __init__(self, data):
@@ -38,20 +39,21 @@ def collate_fn(batch):
 if __name__ == '__main__':
     model_dir = './T5/best_model'
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    tokenizer.bos_token_id = tokenizer.pad_token_id
     model = T5ForConditionalGeneration.from_pretrained(model_dir)
+
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     model.eval()
 
+    # Ensure that `decoder_start_token_id` is set
     generation_config = GenerationConfig(
         early_stopping=True,
         num_beams=4,
-        no_repeat_ngram_size=3,
-        # forced_bos_token_id=tokenizer.bos_token_id,
-        forced_bos_token_id=0,
-        forced_eos_token_id=2,
-        max_length=1024,
+        no_repeat_ngram_size=5, #3,
+        max_length=512,  # Adjust max length as needed
+        decoder_start_token_id=tokenizer.bos_token_id,  # Explicitly set the decoder start token ID
     )
 
     model.generation_config = generation_config
@@ -77,12 +79,16 @@ if __name__ == '__main__':
                 input_ids = batch['input_ids'].to(device)
                 attention_mask = batch['attention_mask'].to(device)
 
+                # Generate outputs
                 outputs = model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
-                    generation_config=generation_config,
+                    num_beams=generation_config.num_beams,
+                    no_repeat_ngram_size=generation_config.no_repeat_ngram_size,
+                    max_length=generation_config.max_length,
+                    early_stopping=generation_config.early_stopping,
+                    decoder_start_token_id=generation_config.decoder_start_token_id,
                 )
-
                 decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
                 all_outputs.extend(decoded_outputs)
 
