@@ -1,9 +1,10 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 # from transformers import BartForConditionalGeneration, BartTokenizer, GenerationConfig
-from transformer import T5ForConditionalGeneration, AutoTokenizer, GenerationConfig
+from transformers import T5ForConditionalGeneration, AutoTokenizer, GenerationConfig
 import pickle
 import os
+from tqdm import tqdm
 
 class ReviewDataset(Dataset):
     def __init__(self, data):
@@ -20,6 +21,13 @@ class ReviewDataset(Dataset):
 
 def collate_fn(batch):
     input_ids = torch.stack([item['input_ids'] for item in batch])
+
+    labels = [item['labels'] for item in batch]
+
+    # Dynamically pad the input_ids and labels
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
+    labels = pad_sequence(labels, batch_first=True, padding_value=-100)
+
     attention_mask = (input_ids != tokenizer.pad_token_id).long()
     return {
         'input_ids': input_ids,
@@ -28,8 +36,6 @@ def collate_fn(batch):
     }
 
 if __name__ == '__main__':
-    
-    # model_dir = './BART/best_model'
     model_dir = './T5/best_model'
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = T5ForConditionalGeneration.from_pretrained(model_dir)
@@ -67,7 +73,7 @@ if __name__ == '__main__':
         all_outputs = []
         all_references = []  # for if we have reference summaries
         with torch.no_grad():
-            for batch in dataloader:
+            for batch in tqdm(dataloader):
                 input_ids = batch['input_ids'].to(device)
                 attention_mask = batch['attention_mask'].to(device)
 
@@ -86,14 +92,14 @@ if __name__ == '__main__':
                 all_references.extend(decoded_labels)
 
         with open(output_file, 'w', encoding='utf-8') as f:
-            for output in all_outputs:
+            for output in tqdm(all_outputs):
                 f.write(output.strip() + '\n')
 
         # save references for evaluation
         if all_references:
             ref_file = output_file.replace('.txt', '_references.txt')
             with open(ref_file, 'w', encoding='utf-8') as f:
-                for ref in all_references:
+                for ref in tqdm(all_references):
                     f.write(ref.strip() + '\n')
 
     print("Generating outputs for the dev set...")

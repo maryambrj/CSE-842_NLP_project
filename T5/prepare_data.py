@@ -3,8 +3,9 @@ import json
 import re
 import torch
 # from transformers import BartTokenizer
-from transformer import T5ForConditionalGeneration, AutoTokenizer
+from transformers import T5ForConditionalGeneration, AutoTokenizer
 import pickle
+from tqdm import tqdm
 
 # Define helper functions
 def extract_input_output_pairs(data_split_path):
@@ -113,7 +114,7 @@ def preprocess_text(text):
 
 def tokenize_and_save(data_pairs, tokenizer, filename):
     tokenized_data = []
-    for pair in data_pairs:
+    for pair in tqdm(data_pairs):
         # Tokenize input
         inputs = tokenizer(
             pair['input'],
@@ -143,7 +144,7 @@ def tokenize_and_save(data_pairs, tokenizer, filename):
 
 def save_data_pairs(data_pairs, filename):
     with open(filename, 'w', encoding='utf-8') as f:
-        for pair in data_pairs:
+        for pair in tqdm(data_pairs):
             json_line = json.dumps(pair)
             f.write(json_line + '\n')
 

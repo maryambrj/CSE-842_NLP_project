@@ -66,7 +66,7 @@ if __name__ == '__main__':
     current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
     run_name = f"bs{batch_size}_lr{learning_rate}_{current_time}"
     
-    wandb.init(project='CSE-842_NLP_project', entity='maryam-brj', name=run_name)
+    wandb.init(project='CSE-842_NLP_project', entity='zhiyingli2022-michigan-state-university', name=run_name)
 
 
     print("Loading tokenized data...")
