@@ -55,8 +55,9 @@ def evaluate_metrics(reference, candidate):
     
     return results
 
-reference_text = "The quick brown fox jumps over the lazy dog."
-candidate_text = "The quick brown fox jumps over the lazy dogg"
+reference_text = "ground truth"
+
+candidate_text = "generated output"
 
 metrics_results = evaluate_metrics(reference_text, candidate_text)
 print(metrics_results)

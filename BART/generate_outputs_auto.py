@@ -26,7 +26,6 @@ def collate_fn(batch):
     input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
     labels = pad_sequence(labels, batch_first=True, padding_value=-100)
 
-    # Create attention masks
     attention_mask = (input_ids != tokenizer.pad_token_id).long()
 
     return {
@@ -44,13 +43,12 @@ if __name__ == '__main__':
     model.to(device)
     model.eval()
 
-    # Ensure that `decoder_start_token_id` is set
     generation_config = GenerationConfig(
         early_stopping=True,
         num_beams=4,
         no_repeat_ngram_size=5, #3,
-        max_length=512,  # Adjust max length as needed
-        decoder_start_token_id=tokenizer.bos_token_id,  # Explicitly set the decoder start token ID
+        max_length=512, 
+        decoder_start_token_id=tokenizer.bos_token_id,  
     )
 
 
@@ -68,15 +66,14 @@ if __name__ == '__main__':
 
 
     def generate_outputs(dataloader, output_file):
-        all_outputs = []  # Reset after each dataset
-        all_references = []  # Reset references as well
+        all_outputs = [] 
+        all_references = []  
     
         with torch.no_grad():
             for batch in dataloader:
                 input_ids = batch['input_ids'].to(device)
                 attention_mask = batch['attention_mask'].to(device)
     
-                # Generate outputs
                 outputs = model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
@@ -87,29 +84,23 @@ if __name__ == '__main__':
                     decoder_start_token_id=generation_config.decoder_start_token_id,
                 )
     
-                # Decode outputs and append to the final list
                 decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
                 all_outputs.extend(decoded_outputs)
     
     
-                # Decode labels (optional, for evaluation)
                 if 'labels' in batch:
                     decoded_labels = tokenizer.batch_decode(batch['labels'], skip_special_tokens=True)
                     all_references.extend(decoded_labels)
     
-        # Write generated outputs to file (one output per line)
         with open(output_file, 'w', encoding='utf-8') as f:
             for output in all_outputs:
                 f.write(output.strip() + '\n')
 
-        # Write references to a separate file (for evaluation purposes)
         if all_references:
             ref_file = output_file.replace('.txt', '_references.txt')
             with open(ref_file, 'w', encoding='utf-8') as f:
                 for ref in all_references:
                     f.write(ref.strip() + '\n')
-
-
 
 
     print("Generating outputs for the dev set...")
